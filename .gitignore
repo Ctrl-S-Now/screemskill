@@ -1,0 +1,6 @@
+.DS_Store
+dist/
+ESP-IDF/ESP32-S3-Touch-LCD-2.8B-Test/build/
+ESP-IDF/ESP32-S3-Touch-LCD-2.8B-Test/sdkconfig
+ESP-IDF/ESP32-S3-Touch-LCD-2.8B-Test/sdkconfig.old
+*.log

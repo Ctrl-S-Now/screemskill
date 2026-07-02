@@ -1,0 +1,4 @@
+interface:
+  display_name: "ESP32-S3 2.8-inch Screen Module"
+  short_description: "Describe what you want this 2.8-inch board to do"
+  default_prompt: "Use $esp32-s3-2-8-screen-module to help me get this ESP32-S3 2.8-inch screen board working and turn it into what I describe."
