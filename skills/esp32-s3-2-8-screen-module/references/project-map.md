@@ -80,8 +80,13 @@ For most product ideas, keep this sequence intact.
 ## Safe Edit Zones
 
 Edit here first:
-- New pages, text, indicators, animations, timers, touch callbacks: `LVGL_Example.c`
-- Demo selection or replacing the default screen: `main.c`
+- **Full-screen / animated / game-like apps:** a new folder under `main/`
+  (e.g. `main/Snake_Game/`) that renders directly to a PSRAM framebuffer via
+  `esp_lcd_panel_draw_bitmap` — no LVGL. Register it in `main/CMakeLists.txt`
+  (`SRCS` + `INCLUDE_DIRS`) and branch to it from `main.c`. See
+  `references/onscreen-apps.md` and `references/examples/snake/`.
+- **Control-heavy LVGL UIs** (buttons, lists, forms): `LVGL_Example.c`
+- Demo/app selection or replacing the default screen: `main.c`
 - LVGL refresh cadence or touch handoff details: `LVGL_Driver.c`
 
 Edit only when symptoms point there:

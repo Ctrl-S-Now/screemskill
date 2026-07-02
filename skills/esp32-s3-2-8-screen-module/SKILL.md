@@ -1,11 +1,13 @@
 ---
 name: esp32-s3-2-8-screen-module
-description: Bring up, customize, build, flash, and troubleshoot the ESP32-S3 2.8-inch screen module repository that ships vendor ESP-IDF and Arduino samples for the 480x640 ST7701S + GT911 board. Use when the user refers to this board in exact or fuzzy ways such as ESP32-S3 2.8-inch screen module, ESP32-S3 2.8寸屏幕模组, ESP32-S3 带屏模组, 2.8寸 ESP32-S3 小屏, ESP32-S3 屏幕板, ESP32-S3 彩屏板, ESP32-S3 小屏开发板, 我买的 ESP32-S3 屏幕模组, 那块 2.8 寸小屏, 那块带触摸的小屏板, 这块 ESP32-S3 小屏, 这块带屏开发板, or similar descriptions, and Codex needs to set up the local environment, make the board work on macOS or Windows, flash firmware, configure keyboard HID or other HID-like USB behavior, or change what appears on the screen from natural-language requests without requiring hardware knowledge from the user.
+description: Bring up, customize, build, flash, and troubleshoot the ESP32-S3 2.8-inch screen module repository that ships vendor ESP-IDF and Arduino samples for the 480x640 ST7701S + GT911 board. Use when the user refers to this board in exact or fuzzy ways such as ESP32-S3 2.8-inch screen module, ESP32-S3 2.8寸屏幕模组, ESP32-S3 带屏模组, 2.8寸 ESP32-S3 小屏, ESP32-S3 屏幕板, ESP32-S3 彩屏板, ESP32-S3 小屏开发板, 我买的 ESP32-S3 屏幕模组, 那块 2.8 寸小屏, 那块带触摸的小屏板, 这块 ESP32-S3 小屏, 这块带屏开发板, or similar descriptions, and the agent needs to set up the local environment, make the board work on macOS or Windows, flash firmware, configure keyboard HID or other HID-like USB behavior, or change what appears on the screen from natural-language requests without requiring hardware knowledge from the user. Agent-neutral: runs on Claude, Codex, WorkBuddy, Trae, Qoder, or any coding agent (see COMPATIBILITY.md).
 ---
 
 # Esp32 S3 2.8 Inch Screen Module
 
-Use this skill as a non-technical operator for this exact board and repository. The user should be able to describe goals in plain language such as "帮我把这块小屏点亮", "把它变成一个时钟", "帮我配好环境", or "把它做成 HID 键盘", and Codex should translate that into the right environment setup, flashing flow, and code changes without pushing hardware details back onto the user.
+Use this skill as a non-technical operator for this exact board and repository. The user should be able to describe goals in plain language such as "帮我把这块小屏点亮", "把它变成一个时钟", "帮我配好环境", or "把它做成 HID 键盘", and the agent should translate that into the right environment setup, flashing flow, and code changes without pushing hardware details back onto the user.
+
+This skill is **agent-neutral**: "the agent" means whichever assistant is running it (Claude, Codex, WorkBuddy, Trae, Qoder, …). See `COMPATIBILITY.md` for installation and per-client interface manifests. Do not assume a specific assistant in user-facing language.
 
 ## Interaction Mode
 
@@ -64,7 +66,21 @@ Bad first-response patterns:
 ### If The User Wants "Make It Show X"
 
 - Treat the request as a UI or feature brief, not as a coding request.
-- Edit the safest existing LVGL entry points first.
+- Choose the rendering approach by UI type:
+  - **Full-screen / animated / game-like content** (snake, clock face, gauges,
+    status displays): render directly to a PSRAM framebuffer and push frames
+    with `esp_lcd_panel_draw_bitmap`. **Do not use LVGL** for these. Read
+    `references/onscreen-apps.md` first.
+  - **Control-heavy UIs** (buttons, lists, forms): extend the existing LVGL app.
+- Apply the house visual style unless the user asks otherwise: read
+  `references/nothing-style.md` (pure black, dot-matrix texture, monochrome +
+  single red accent). A compile-tested template lives in
+  `references/examples/snake/`.
+- **Touch is not plug-and-play.** Screen and touch axes are swapped on this
+  board, and mounting orientation affects swipe directions. After first flashing
+  an interactive app, ask the user to test all four directions and correct with
+  the transform recipe in `references/onscreen-apps.md`. Poll touch on a fixed
+  10 ms cadence — never a sub-tick delay (see the `vTaskDelay(0)` trap).
 - Preserve the driver stack unless the symptom is clearly hardware-level.
 
 ### If The User Wants HID Behavior
@@ -82,17 +98,22 @@ Bad first-response patterns:
 - Never ask the user to look up pins, LCD controller model, touch controller model, RGB timing, LVGL entry points, or framework-specific bootstrapping steps. This repository already contains those details.
 - Never ask the user to manually compose environment-install commands when the bundled bootstrap scripts can do the work.
 - Never mix path conventions casually. In Markdown and user instructions, show POSIX-style paths such as `skills/.../script.sh` for macOS and Linux, and Windows-style paths such as `.\skills\...\script.ps1` for Windows. Match the current operating system when generating commands or code.
-- Never describe the skill as if the user must personally operate each tool. The default stance is that Codex does the technical work and only asks for hardware actions or approvals when needed.
+- Never describe the skill as if the user must personally operate each tool. The default stance is that the agent does the technical work and only asks for hardware actions or approvals when needed.
 - Keep vendor driver edits minimal when the task is only about what appears on screen.
-- Prefer extending the existing LVGL app rather than replacing the driver stack.
+- For full-screen or animated UIs, prefer a direct-to-framebuffer app over LVGL; for control-heavy UIs, extend the existing LVGL app. Either way, do not replace the driver stack.
+- Always calibrate touch direction with the user after flashing an interactive app, and never poll touch on a sub-tick `vTaskDelay` (see `references/onscreen-apps.md`).
 
 ## Internal Execution Resources
 
 Use these resources as implementation details, not as the default user-facing structure:
 
+- `COMPATIBILITY.md`: agent-neutral install/trigger notes and per-client interface manifests (Claude, Codex, WorkBuddy, Trae, Qoder, …)
 - `references/interaction.md`: user-facing tone, question policy, and natural-language examples
 - `references/workflows.md`: OS-specific setup, flashing paths, HID cautions, and troubleshooting flow
 - `references/project-map.md`: board facts, edit boundaries, and runtime structure
+- `references/onscreen-apps.md`: rendering (framebuffer vs LVGL), touch axis calibration, poll-cadence trap, speed/threshold tuning, build gotchas
+- `references/nothing-style.md`: the house Nothing-inspired visual language (palette, typography, layout) — no proprietary assets
+- `references/examples/snake/`: compile-tested, hardware-verified reference app realizing the style + correct touch handling
 - `scripts/doctor.py`: environment and connection inspection
 - `scripts/bootstrap_mac.sh` and `scripts/bootstrap_windows.ps1`: host environment setup
 - `scripts/setup_and_light.sh` and `scripts/setup_and_light.ps1`: uninterrupted setup followed by immediate first-boot flashing

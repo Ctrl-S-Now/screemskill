@@ -150,10 +150,19 @@ Operational rule:
 
 ## Typical Natural-Language Requests
 
-"Show a digital clock":
-- Extend `LVGL_Example.c`
+> Rendering choice: full-screen / animated / game-like → direct framebuffer app
+> (no LVGL); control-heavy → LVGL. Apply the house Nothing-style by default.
+> See `references/onscreen-apps.md` and `references/nothing-style.md`.
+
+"Make a game" (snake, etc.):
+- New `main/<Game>/` app rendering to a PSRAM framebuffer; no LVGL
+- Start from the template in `references/examples/snake/`
+- Calibrate touch direction with the user; poll at a fixed 10 ms cadence
+
+"Show a digital clock" / "status display":
+- Direct framebuffer app if it's full-screen/animated; else extend `LVGL_Example.c`
 - Use the existing `RTC_Loop()` data path
-- Add an LVGL timer or label refresh
+- For LVGL: add a timer or label refresh
 
 "Make a custom dashboard":
 - Rework the existing `Onboard_create()` layout in `LVGL_Example.c`
@@ -177,7 +186,19 @@ Blank screen:
 
 Touch not responding:
 - Verify the screen itself renders first
+- **In a direct-framebuffer app, first suspect the poll loop:** a sub-tick
+  `vTaskDelay` (e.g. `pdMS_TO_TICKS(8)` -> 0 ticks) busy-spins and starves the
+  touch task, killing touch *and* speeding the app up. Use a fixed 10 ms poll.
+  See `references/onscreen-apps.md`.
 - Then inspect `LVGL_Driver.c` and `GT911.c`
+
+Touch works but swipe directions are wrong (rotated / mirrored):
+- Expected: screen and touch axes are swapped on this board (`screen_x=touch_y`,
+  `screen_y=touch_x`). Mounting orientation can further rotate/mirror.
+- Ask the user for all four observed (swipe -> result) pairs, solve for the
+  transform (axis swap / 90° rotation / single-axis flip), verify all four, then
+  ship. Recipe in `references/onscreen-apps.md`. Do not guess a single flip when
+  the report describes a rotation.
 
 Build fails with memory or PSRAM-related errors:
 - Preserve `sdkconfig.defaults` and `sdkconfig.defaults.esp32s3`

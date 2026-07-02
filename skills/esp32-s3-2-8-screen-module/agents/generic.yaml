@@ -1,0 +1,7 @@
+# Portable interface metadata for any agent client.
+# Copy to agents/<agent>.yaml and adapt to that client's manifest schema if
+# needed. Only presentation fields — the skill logic is agent-neutral.
+interface:
+  display_name: "ESP32-S3 2.8-inch Screen Module"
+  short_description: "Describe what you want this 2.8-inch board to do"
+  default_prompt: "Use the esp32-s3-2-8-screen-module skill to help me get this ESP32-S3 2.8-inch screen board working and turn it into what I describe."
