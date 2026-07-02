@@ -4,6 +4,8 @@
 
 - Need the fastest confidence check that the board is alive:
   - flash the bundled first-boot image firmware
+- Need to validate environment setup:
+  - do not build source; immediately flash the bundled first-boot image after setup
 - Need a custom UI or device behavior:
   - use the ESP-IDF source project
 - Need Arduino specifically:
@@ -34,13 +36,15 @@ python .\skills\esp32-s3-2-8-screen-module\scripts\doctor.py --json
 
 What to look for:
 - `repo_root` resolved
-- `eim` available for automated ESP-IDF provisioning
-- `idf.py` available for source builds
+- `idf_installations` and `usable_idf_export` before treating ESP-IDF as missing
+- `idf.py` on `PATH` means loaded now; a valid activation script means installed but not loaded
 - `esptool.py` or `python -m esptool` available for first-boot image firmware flashing
 - Python helper modules present: `yaml`, `serial`, `esptool`
 - at least one likely serial port
 
 If the skill is installed outside this repository, pass `--repo-root <path>` to `doctor.py`, and set `ESP32_S3_TOUCH_LCD_REPO` before using the shell or PowerShell wrappers.
+
+Do not install ESP-IDF when `idf.py` is merely absent from `PATH` but `usable_idf_export` is present. Activate that installation instead.
 
 ## ESP-IDF Version Choice
 
@@ -53,10 +57,10 @@ Reasoning:
 
 ## macOS Bring-Up
 
-One-shot environment setup:
+Environment setup followed immediately by first light:
 
 ```bash
-./skills/esp32-s3-2-8-screen-module/scripts/bootstrap_mac.sh
+./skills/esp32-s3-2-8-screen-module/scripts/setup_and_light.sh /dev/cu.usbmodemXXXX
 ```
 
 First-boot image firmware:
@@ -85,11 +89,24 @@ Build, flash, monitor:
 
 ## Windows Bring-Up
 
-One-shot environment setup:
+Environment setup followed immediately by first light:
 
 ```powershell
-.\skills\esp32-s3-2-8-screen-module\scripts\bootstrap_windows.ps1
+.\skills\esp32-s3-2-8-screen-module\scripts\setup_and_light.ps1 COM5
 ```
+
+## First-Boot No-Build Rule
+
+For environment setup, connection checks, and first light:
+
+- use `Firmware/ESP32-S3-2.8-Image-Test.bin`
+- flash it at offset `0x0`
+- do not copy the editable project
+- do not run `idf.py build`
+- do not delete or repair a `build/` directory
+- do not wait for another user message after setup succeeds
+
+Source build begins only after the user requests a custom application or behavior.
 
 First-boot image firmware:
 

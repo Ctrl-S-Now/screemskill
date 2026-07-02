@@ -11,6 +11,8 @@ Users can say things such as:
 
 The Skill handles environment checks, source changes, builds, flashing, and startup-log verification. It supports macOS and Windows and does not require the user to understand pins, display timing, ESP-IDF commands, or serial-port tooling.
 
+For initial setup, the Skill reuses an existing compatible ESP-IDF installation whenever possible. It does not compile source as a first-boot test. Once setup is ready, it immediately flashes the bundled image firmware and asks the user to confirm the visible screen instead of waiting for another instruction.
+
 ## Install On macOS
 
 ```bash

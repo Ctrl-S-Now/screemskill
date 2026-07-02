@@ -42,6 +42,28 @@ function Resolve-RepoRoot {
 $repoRoot = Resolve-RepoRoot
 $firmware = Join-Path $repoRoot "Firmware/ESP32-S3-2.8-Image-Test.bin"
 
+$hasEsptoolCommand = Get-Command esptool.py -ErrorAction SilentlyContinue
+if (-not $hasEsptoolCommand) {
+  $pythonProbe = if (Get-Command py -ErrorAction SilentlyContinue) { "py" } elseif (Get-Command python -ErrorAction SilentlyContinue) { "python" } else { $null }
+  if ($pythonProbe) {
+    & $pythonProbe -c "import esptool" 2>$null
+  }
+  if (-not $pythonProbe -or $LASTEXITCODE -ne 0) {
+    foreach ($root in @((Join-Path $HOME "esp"), (Join-Path $HOME "espidf"))) {
+      if (Test-Path $root) {
+        $export = Get-ChildItem -Path $root -Filter "export.ps1" -File -Recurse -ErrorAction SilentlyContinue |
+          Where-Object { $_.FullName -match "[\\/]esp-idf[\\/]export\.ps1$" } |
+          Sort-Object FullName |
+          Select-Object -First 1
+        if ($export) {
+          . $export.FullName | Out-Null
+          break
+        }
+      }
+    }
+  }
+}
+
 $esptool = Get-Command esptool.py -ErrorAction SilentlyContinue
 if ($esptool) {
   & esptool.py --chip esp32s3 --port $Port --baud $Baud write_flash 0x0 $firmware
@@ -50,14 +72,20 @@ if ($esptool) {
 
 $py = Get-Command py -ErrorAction SilentlyContinue
 if ($py) {
-  & py -m esptool --chip esp32s3 --port $Port --baud $Baud write_flash 0x0 $firmware
-  exit $LASTEXITCODE
+  & py -c "import esptool" 2>$null
+  if ($LASTEXITCODE -eq 0) {
+    & py -m esptool --chip esp32s3 --port $Port --baud $Baud write_flash 0x0 $firmware
+    exit $LASTEXITCODE
+  }
 }
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 if ($python) {
-  & python -m esptool --chip esp32s3 --port $Port --baud $Baud write_flash 0x0 $firmware
-  exit $LASTEXITCODE
+  & python -c "import esptool" 2>$null
+  if ($LASTEXITCODE -eq 0) {
+    & python -m esptool --chip esp32s3 --port $Port --baud $Baud write_flash 0x0 $firmware
+    exit $LASTEXITCODE
+  }
 }
 
 throw "esptool.py or python is required to flash the first-boot image firmware."

@@ -51,6 +51,35 @@ def find_tool(name: str) -> str | None:
     return shutil.which(name)
 
 
+def discover_idf_exports(system_name: str) -> list[str]:
+    export_name = "export.ps1" if system_name == "Windows" else "export.sh"
+    candidates: list[Path] = []
+    idf_path = os.environ.get("IDF_PATH")
+    if idf_path:
+        candidates.append(Path(idf_path).expanduser() / export_name)
+
+    home = Path.home()
+    patterns = (
+        f"esp/**/esp-idf/{export_name}",
+        f"espidf/**/esp-idf/{export_name}",
+    )
+    for pattern in patterns:
+        candidates.extend(home.glob(pattern))
+
+    idf_env = home / ".espressif/idf-env.json"
+    try:
+        installed = json.loads(idf_env.read_text()).get("idfInstalled", {})
+        for value in installed.values():
+            path = value.get("path")
+            if path:
+                candidates.append(Path(path).expanduser() / export_name)
+    except (OSError, ValueError, AttributeError):
+        pass
+
+    unique = {str(path.resolve()) for path in candidates if path.is_file()}
+    return sorted(unique, key=lambda value: ("5.4" not in value, value))
+
+
 def has_python_module(module_name: str) -> bool:
     return importlib.util.find_spec(module_name) is not None
 
@@ -109,6 +138,7 @@ def detect_serial_ports(system_name: str) -> list[str]:
 def build_report(repo_root: Path | None) -> dict[str, object]:
     system_name = platform.system()
     idf_path = os.environ.get("IDF_PATH")
+    idf_installations = discover_idf_exports(system_name)
     python_cmd = find_tool("python3") or find_tool("python") or find_tool("py")
     report: dict[str, object] = {
         "platform": {
@@ -124,6 +154,8 @@ def build_report(repo_root: Path | None) -> dict[str, object]:
             "python": python_cmd,
             "IDF_PATH": idf_path,
         },
+        "idf_installations": idf_installations,
+        "usable_idf_export": idf_installations[0] if idf_installations else None,
         "python_modules": {
             "yaml": has_python_module("yaml"),
             "serial": has_python_module("serial"),
@@ -144,9 +176,13 @@ def build_report(repo_root: Path | None) -> dict[str, object]:
             "Set --repo-root or ESP32_S3_TOUCH_LCD_REPO so the scripts can locate the vendor project."
         )
 
-    if not report["tools"]["idf.py"]:
+    if not report["tools"]["idf.py"] and idf_installations:
         report["recommended_actions"].append(
-            "Run the bootstrap script for this OS, or open an ESP-IDF-enabled terminal before attempting a source build."
+            "Activate the existing ESP-IDF with usable_idf_export; do not install another copy."
+        )
+    elif not report["tools"]["idf.py"]:
+        report["recommended_actions"].append(
+            "No existing ESP-IDF installation was found. Bootstrap is needed only before a requested source build."
         )
 
     if not report["tools"]["esptool.py"] and not report["tools"]["python"]:
@@ -154,7 +190,7 @@ def build_report(repo_root: Path | None) -> dict[str, object]:
             "Install esptool.py or make python available before flashing the first-boot image firmware."
         )
 
-    if not report["tools"]["eim"]:
+    if not report["tools"]["eim"] and not idf_installations:
         report["recommended_actions"].append(
             "Install Espressif Installation Manager so ESP-IDF can be provisioned automatically."
         )
@@ -197,6 +233,7 @@ def main() -> int:
     print(f"esptool.py: {report['tools']['esptool.py'] or 'missing'}")
     print(f"eim: {report['tools']['eim'] or 'missing'}")
     print(f"python: {report['tools']['python'] or 'missing'}")
+    print(f"usable_idf_export: {report['usable_idf_export'] or 'not found'}")
     print("python_modules:")
     for name, present in report["python_modules"].items():
         print(f"  - {name}: {'ok' if present else 'missing'}")

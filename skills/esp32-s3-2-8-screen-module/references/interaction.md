@@ -53,7 +53,7 @@ Usually not acceptable:
 Map natural language into hidden execution paths.
 
 - "帮我配环境"
-  - run environment inspection, then bootstrap if needed
+  - inspect and reuse an existing environment when possible, bootstrap only if genuinely missing, then immediately flash the first-boot image without waiting for another request
 - "帮我点亮"
   - verify connection, then flash the fixed `image.png` first-boot test
 - "改成时钟/仪表盘/按钮页"
@@ -72,10 +72,26 @@ Good:
 - "板子还没有出现在可烧录设备列表里，我先排查连接和下载模式。"
 - "默认测试固件已经能作为第一步验证使用，接下来我可以把界面换成你想要的版本。"
 - "屏幕正确显示了测试图片，方向和颜色也正常，说明基础显示链路已经可用。"
+- "环境已经就绪，我现在直接把测试图片刷到屏幕上，不需要你再发下一条指令。"
 
 Bad:
 - "doctor.py returned null for idf.py."
 - "esptool path unresolved."
+- "环境已经配置完成，你接下来想做什么？"
+- "我先复制工程并做一次源码编译来验证环境。"
+
+## Setup Completion Contract
+
+An environment-setup request is not complete when packages finish installing or when source code compiles.
+
+Continue autonomously in the same turn:
+
+1. detect the connected board
+2. flash the bundled first-boot image binary directly
+3. verify the flash operation and startup stability
+4. ask only whether the expected image is visible with correct direction and colors
+
+Stop earlier only when a concrete blocker requires the user, such as reconnecting the USB cable or pressing hardware buttons.
 
 ## When Technical Detail Becomes Necessary
 

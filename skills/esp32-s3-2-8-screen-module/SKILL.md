@@ -48,13 +48,16 @@ Bad first-response patterns:
 ### If The User Wants "Set Everything Up"
 
 - Start with the local environment and board-connection check.
-- If tools are missing, use the OS-specific bootstrap flow.
-- After environment setup, move directly to proof-of-life instead of waiting for the user to ask again.
+- Distinguish "not loaded in this terminal" from "not installed on disk." If a compatible ESP-IDF already exists, activate and reuse it; do not install another copy.
+- If tools are genuinely missing, use the OS-specific bootstrap flow.
+- Treat setup and first light as one uninterrupted task. As soon as setup succeeds and a board is connected, flash the prebuilt first-boot image immediately.
+- Do not stop after reporting that the environment is ready. Setup is complete only after the prebuilt image has been flashed and the user has been asked to confirm the visible result, or after reporting a concrete hardware blocker such as no serial port.
 
 ### If The User Wants "Light It Up"
 
 - Prefer the lowest-friction proof-of-life path first.
 - Use the bundled image-test firmware when the goal is only to verify that the board, cable, screen, and flashing loop are healthy.
+- Flash the prebuilt binary directly. Do not copy the editable project, run `idf.py build`, clean a build directory, or compile source for first-boot validation.
 - The first-boot success screen must be the repository-root `image.png`, rendered full-screen by the panel driver without initializing LVGL. Do not use the vendor LVGL demo as the expected first-boot screen.
 - If the image appears with the expected direction and colors, tell the user the basic display path is usable and offer to continue with a custom interface.
 
@@ -73,6 +76,9 @@ Bad first-response patterns:
 
 ## Operating Rules
 
+- Never use source compilation as an environment or first-boot validation step. Building is reserved for a user-requested custom application that cannot be satisfied by the prebuilt first-boot firmware.
+- Never copy the ESP-IDF project into the current workspace merely to verify setup or light the screen.
+- Never reinstall ESP-IDF only because `idf.py` is absent from the current `PATH`. Inspect known installations and activation scripts first.
 - Never ask the user to look up pins, LCD controller model, touch controller model, RGB timing, LVGL entry points, or framework-specific bootstrapping steps. This repository already contains those details.
 - Never ask the user to manually compose environment-install commands when the bundled bootstrap scripts can do the work.
 - Never mix path conventions casually. In Markdown and user instructions, show POSIX-style paths such as `skills/.../script.sh` for macOS and Linux, and Windows-style paths such as `.\skills\...\script.ps1` for Windows. Match the current operating system when generating commands or code.
@@ -89,5 +95,6 @@ Use these resources as implementation details, not as the default user-facing st
 - `references/project-map.md`: board facts, edit boundaries, and runtime structure
 - `scripts/doctor.py`: environment and connection inspection
 - `scripts/bootstrap_mac.sh` and `scripts/bootstrap_windows.ps1`: host environment setup
+- `scripts/setup_and_light.sh` and `scripts/setup_and_light.ps1`: uninterrupted setup followed by immediate first-boot flashing
 - `scripts/build_idf.sh` and `scripts/build_idf.ps1`: source build, flash, and monitor
 - `scripts/flash_merged_firmware.sh` and `scripts/flash_merged_firmware.ps1`: prebuilt first-boot image firmware flashing

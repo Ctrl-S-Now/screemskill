@@ -45,9 +45,35 @@ function Ensure-Idf {
     return
   }
 
-  $exportScript = Join-Path $HOME "esp/esp-idf/export.ps1"
-  if (Test-Path $exportScript) {
-    . $exportScript | Out-Null
+  $candidates = @()
+  if ($env:IDF_PATH) {
+    $candidates += (Join-Path $env:IDF_PATH "export.ps1")
+  }
+  $candidates += (Join-Path $HOME "esp\v5.4.1\esp-idf\export.ps1")
+  $candidates += (Join-Path $HOME "esp\v5.4.2\esp-idf\export.ps1")
+  $candidates += (Join-Path $HOME "esp\esp-idf\export.ps1")
+  $candidates += (Join-Path $HOME "espidf\esp-idf\export.ps1")
+
+  foreach ($exportScript in $candidates) {
+    if (Test-Path $exportScript) {
+      . $exportScript | Out-Null
+      if (Get-Command idf.py -ErrorAction SilentlyContinue) {
+        return
+      }
+    }
+  }
+
+  foreach ($root in @((Join-Path $HOME "esp"), (Join-Path $HOME "espidf"))) {
+    if (Test-Path $root) {
+      $exportScript = Get-ChildItem -Path $root -Filter "export.ps1" -File -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match "[\\/]esp-idf[\\/]export\.ps1$" } |
+        Sort-Object FullName |
+        Select-Object -First 1
+      if ($exportScript) {
+        . $exportScript.FullName | Out-Null
+        break
+      }
+    }
   }
 
   $idf = Get-Command idf.py -ErrorAction SilentlyContinue

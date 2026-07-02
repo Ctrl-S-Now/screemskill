@@ -39,13 +39,29 @@ resolve_repo_root() {
 }
 
 ensure_idf() {
+  local export_script
+
   if command -v idf.py >/dev/null 2>&1; then
     return 0
   fi
 
-  if [[ -f "${HOME}/esp/esp-idf/export.sh" ]]; then
+  for export_script in \
+    "${IDF_PATH:-}/export.sh" \
+    "${HOME}/esp/v5.4.1/esp-idf/export.sh" \
+    "${HOME}/esp/v5.4.2/esp-idf/export.sh" \
+    "${HOME}/esp/esp-idf/export.sh" \
+    "${HOME}/espidf/esp-idf/export.sh"; do
+    if [[ "${export_script}" != "/export.sh" && -f "${export_script}" ]]; then
+      # shellcheck disable=SC1090
+      source "${export_script}" >/dev/null
+      command -v idf.py >/dev/null 2>&1 && return 0
+    fi
+  done
+
+  export_script="$(find "${HOME}/esp" "${HOME}/espidf" -maxdepth 6 -path '*/esp-idf/export.sh' -type f 2>/dev/null | sort | head -n 1 || true)"
+  if [[ -n "${export_script}" ]]; then
     # shellcheck disable=SC1091
-    source "${HOME}/esp/esp-idf/export.sh" >/dev/null
+    source "${export_script}" >/dev/null
   fi
 
   command -v idf.py >/dev/null 2>&1
